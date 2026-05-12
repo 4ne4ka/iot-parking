@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умная парковка - Дашборд</title>
+
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .system-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .system-on {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .system-off {
+            background: rgba(108, 117, 125, 0.2);
+            border: 2px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .system-open {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .system-closed {
+            background: rgba(220, 53, 69, 0.2);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+        }
+
+        .event-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #667eea;
+        }
+
+        .refresh-time {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.8rem;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .parking-bar {
+            height: 30px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .parking-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1><i class="fas fa-parking"></i> Умная подземная парковка</h1>
+            </div>
+            <div class="col-auto">
+                    <span class="refresh-time pulse">
+                        <i class="fas fa-sync-alt"></i> Обновлено: <span id="updateTime">--:--:--</span>
+                    </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="stat-label">Свободно мест</div>
+                <div class="stat-value" id="freeSpaces">0</div>
+                <div class="text-white-50">из 100</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="stat-label">Занято</div>
+                <div class="stat-value" id="occupiedSpaces">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="stat-label">Въехало</div>
+                <div class="stat-value" id="entryCount">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="stat-label">Выехало</div>
+                <div class="stat-value" id="exitCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <h5 class="mb-3"><i class="fas fa-chart-bar"></i> Заполненность парковки</h5>
+        <div class="parking-bar">
+            <div class="parking-bar-fill" id="parkingProgressBar" style="width: 0%"></div>
+        </div>
+        <div class="d-flex justify-content-between">
+            <small>0%</small>
+            <small id="occupancyPercent">0%</small>
+            <small>100%</small>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <h5 class="mb-3"><i class="fas fa-cogs"></i> Состояние систем</h5>
+        <div class="row">
+            <div class="col-md-2 col-6 mb-3">
+                <div class="system-card system-off" id="ventilationCard">
+                    <i class="fas fa-fan fa-2x mb-2"></i>
+                    <h6>Вентиляция</h6>
+                    <span class="badge bg-secondary" id="ventilationBadge">ВЫКЛ</span>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="system-card system-off" id="lightingCard">
+                    <i class="fas fa-lightbulb fa-2x mb-2"></i>
+                    <h6>Освещение</h6>
+                    <span class="badge bg-secondary" id="lightingBadge">ВЫКЛ</span>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="system-card system-closed" id="entryBarrierCard">
+                    <i class="fas fa-door-open fa-2x mb-2"></i>
+                    <h6>Шлагбаум въезд</h6>
+                    <span class="badge bg-danger" id="entryBarrierBadge">ЗАКРЫТ</span>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="system-card system-closed" id="exitBarrierCard">
+                    <i class="fas fa-door-closed fa-2x mb-2"></i>
+                    <h6>Шлагбаум выезд</h6>
+                    <span class="badge bg-danger" id="exitBarrierBadge">ЗАКРЫТ</span>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="system-card system-off" id="drainPumpCard">
+                    <i class="fas fa-water fa-2x mb-2"></i>
+                    <h6>Дренаж</h6>
+                    <span class="badge bg-secondary" id="drainPumpBadge">ВЫКЛ</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <h5 class="mb-3"><i class="fas fa-history"></i> Последние события</h5>
+                <div class="event-list" id="eventsList"></div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <h5 class="mb-3"><i class="fas fa-terminal"></i> Журнал команд</h5>
+                <div class="event-list" id="commandsList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateDashboard() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('updateTime').textContent =
+                    new Date(data.timestamp).toLocaleTimeString('ru-RU');
+
+                document.getElementById('freeSpaces').textContent = data.parking.freeSpaces;
+                document.getElementById('occupiedSpaces').textContent = data.parking.occupiedSpaces;
+                document.getElementById('entryCount').textContent = data.parking.entryCount;
+                document.getElementById('exitCount').textContent = data.parking.exitCount;
+
+                const progressBar = document.getElementById('parkingProgressBar');
+                progressBar.style.width = data.parking.occupiedSpaces + '%';
+                document.getElementById('occupancyPercent').textContent = data.parking.occupiedSpaces + '%';
+
+                updateSystem('ventilation', data.systems.ventilation);
+                updateSystem('lighting', data.systems.lighting);
+                updateBarrier('entryBarrier', data.systems.entryBarrier);
+                updateBarrier('exitBarrier', data.systems.exitBarrier);
+                updateSystem('drainPump', data.systems.drainPump);
+
+                updateEvents(data.recentEvents);
+                updateCommands(data.recentCommands);
+            });
+    }
+
+    function updateSystem(id, status) {
+        const card = document.getElementById(id + 'Card');
+        const badge = document.getElementById(id + 'Badge');
+        if (status === 'on') {
+            card.className = 'system-card system-on';
+            badge.className = 'badge bg-success';
+            badge.textContent = 'ВКЛ';
+        } else {
+            card.className = 'system-card system-off';
+            badge.className = 'badge bg-secondary';
+            badge.textContent = 'ВЫКЛ';
+        }
+    }
+
+    function updateBarrier(id, status) {
+        const card = document.getElementById(id + 'Card');
+        const badge = document.getElementById(id + 'Badge');
+        if (status === 'open') {
+            card.className = 'system-card system-open';
+            badge.className = 'badge bg-success';
+            badge.textContent = 'ОТКРЫТ';
+        } else {
+            card.className = 'system-card system-closed';
+            badge.className = 'badge bg-danger';
+            badge.textContent = 'ЗАКРЫТ';
+        }
+    }
+
+    function updateEvents(events) {
+        let html = '';
+        events.slice(0, 20).forEach(e => {
+            const cls = e.value === 1 ? 'bg-success' : 'bg-secondary';
+            const txt = e.value === 1 ? 'АКТИВЕН' : 'НЕАКТИВЕН';
+            const time = new Date(e.createdAt).toLocaleTimeString('ru-RU');
+            html += `<div class="event-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>${e.sensorType}</strong>
+                        <span class="badge ${cls}">${txt}</span>
+                    </div>
+                    <small class="text-white-50">${time}</small>
+                </div>`;
+        });
+        document.getElementById('eventsList').innerHTML = html;
+    }
+
+    function updateCommands(cmds) {
+        let html = '';
+        cmds.slice(0, 20).forEach(c => {
+            const cls = c.action === 'on' || c.action === 'open' ? 'bg-success' : 'bg-warning';
+            const time = new Date(c.createdAt).toLocaleTimeString('ru-RU');
+            html += `<div class="event-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>${c.deviceName}</strong>
+                        <span class="badge ${cls}">${c.action}</span>
+                    </div>
+                    <small class="text-white-50">${c.reason}</small><br>
+                    <small class="text-white-50">${time}</small>
+                </div>`;
+        });
+        document.getElementById('commandsList').innerHTML = html;
+    }
+
+    setInterval(updateDashboard, 2000);
+    updateDashboard();
+</script>
+</body>
+</html>
